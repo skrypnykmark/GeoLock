@@ -27,6 +27,11 @@ Open any online or created level, press the lock button, and confirm. Once locke
 There is no manual unlock button. The only ways out of a lock are to beat the
 locked level, disable the mod, or uninstall it.
 
+## Dependencies
+
+- [`geode.node-ids`](https://github.com/geode-sdk/NodeIDs)
+- [`cvolton.level-id-api`](https://github.com/Cvolton/level-id-api-geode)
+
 ## Building
 
 Requires the [Geode SDK](https://docs.geode-sdk.org/getting-started/) and the
