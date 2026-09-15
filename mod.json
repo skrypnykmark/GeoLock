@@ -10,9 +10,10 @@
 	"name": "GeoLock",
 	"version": "v1.0.0",
 	"developer": "skrypnykmark",
-	"description": "Pick one online level, lock in, and you cannot play anything else until you beat it.",
+	"description": "Pick one level, lock in, and you cannot play anything else until you beat it.",
 	"dependencies": {
-		"geode.node-ids": ">=v1.23.3"
+		"geode.node-ids": ">=v1.23.3",
+		"cvolton.level-id-api": ">=v2.0.0"
 	},
 	"resources": {
 		"sprites": [
