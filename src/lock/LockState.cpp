@@ -1,6 +1,7 @@
 #include "LockState.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/binding/LocalLevelManager.hpp>
 #include <cvolton.level-id-api/include/EditorIDs.hpp>
 
 using namespace geode::prelude;
@@ -19,11 +20,15 @@ namespace geolock {
         }
 
         void saveLock(const Lock& lock) {
-            Mod::get()->setSavedValue(LOCK_KEY, matjson::makeObject({
+            auto saved = matjson::makeObject({
                 { "id", lock.levelId },
                 { "name", lock.levelName },
                 { "source", static_cast<int>(lock.source) },
-            }));
+            });
+            if (lock.practiceCopyId) {
+                saved["practice-copy-id"] = *lock.practiceCopyId;
+            }
+            Mod::get()->setSavedValue(LOCK_KEY, saved);
         }
 
         std::optional<Lock> loadLock() {
@@ -56,6 +61,7 @@ namespace geolock {
                 id,
                 saved["name"].asString().unwrapOr(std::string{}),
                 static_cast<LevelSource>(source),
+                saved["practice-copy-id"].as<int>().ok(),
             };
         }
 
@@ -92,9 +98,56 @@ namespace geolock {
         return true;
     }
 
+    bool isLockTarget(GJGameLevel* level) {
+        const auto& lock = activeLock();
+        return lock && level && matches(*lock, level);
+    }
+
+    GJGameLevel* practiceCopy() {
+        const auto& lock = activeLock();
+        if (!lock || !lock->practiceCopyId) {
+            return nullptr;
+        }
+
+        auto copy = EditorIDs::getLevelByID(*lock->practiceCopyId);
+        auto levels = LocalLevelManager::get()->getCreatedLevels(0);
+        return copy && levels && levels->containsObject(copy) ? copy : nullptr;
+    }
+
+    bool setPracticeCopy(GJGameLevel* target, GJGameLevel* copy) {
+        if (!isLockTarget(target)) {
+            return false;
+        }
+
+        auto updatedLock = *activeLock();
+        updatedLock.practiceCopyId.reset();
+        if (copy) {
+            auto levels = LocalLevelManager::get()->getCreatedLevels(0);
+            if (!levels || !levels->containsObject(copy) || copy->m_levelType != GJLevelType::Editor ||
+                isLockTarget(copy)) {
+                return false;
+            }
+
+            auto id = EditorIDs::getID(copy, true);
+            if (id <= 0) {
+                return false;
+            }
+            updatedLock.practiceCopyId = id;
+        }
+
+        saveLock(updatedLock);
+        lockState() = std::move(updatedLock);
+        return true;
+    }
+
     bool isLevelBlocked(GJGameLevel* level) {
         const auto& lock = activeLock();
-        return lock && level && !matches(*lock, level);
+        if (!lock || !level || matches(*lock, level)) {
+            return false;
+        }
+
+        return !lock->practiceCopyId || level->m_levelType != GJLevelType::Editor ||
+            EditorIDs::getID(level, true) != *lock->practiceCopyId;
     }
 
     void clearLockOnCompletion(GJGameLevel* level, bool practiceMode) {

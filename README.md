@@ -2,7 +2,8 @@
 
 A small [Geode](https://geode-sdk.org/) mod for Geometry Dash.
 
-Open any online or created level, press the lock button, and confirm. Once locked, it is the only level you can play until you beat it.
+Open an online or created level, press the lock button, and confirm. Play the
+locked level and an optional practice copy until you beat the original.
 
 ## How it works
 
@@ -12,20 +13,31 @@ Open any online or created level, press the lock button, and confirm. Once locke
    (`Yes` / `No`).
 3. Pressing `Yes` stores that level as the active lock. The lock survives
    restarts and carries over from earlier versions of GeoLock.
-4. While a lock is active, the locked level keeps its normal play button. Every
-   other online or created level shows the lock instead of play, and any attempt
-   to start it is blocked with a single message:
+4. While a lock is active, the target and its attached practice copy keep their
+   normal play buttons. Other online and created levels show the lock instead
+   of play. Blocked launches show a single message:
 
    > Go back to "level_name" (ID: 123456).
 
    This covers online levels, saved/downloaded levels, creator/editor levels,
    official RobTop levels and every other normal way of entering gameplay.
-5. The locked level itself plays normally. As soon as it is completed (outside
-   practice mode), the lock is cleared automatically, silently restoring the
-   play button everywhere.
+5. A normal-mode clear on the original target releases the lock and restores
+   the play buttons.
 
 There is no manual unlock button. The only ways out of a lock are to beat the
 locked level, disable the mod, or uninstall it.
+
+## Practice copies
+
+On the locked level's page, press the copy icon where the lock button was.
+Choose one existing level from **My Levels**, such as a StartPos copy. You can
+play or editor-playtest that copy during the lock. Only the original target can
+release the lock.
+
+The attached level is highlighted in green. Select another row to replace it or
+select the green row again to detach it. The attachment survives renames and
+restarts, and the picker scrolls to it when you reopen it. If you delete the
+attached level, the picker shows it as missing and lets you choose another.
 
 ## Dependencies
 

@@ -1,5 +1,6 @@
 #include "LockControls.hpp"
 
+#include "PracticeCopyPopup.hpp"
 #include "../lock/LockState.hpp"
 
 #include <Geode/Geode.hpp>
@@ -9,6 +10,17 @@ using namespace geode::prelude;
 
 namespace geolock {
     namespace {
+        CCSprite* lockButtonSprite(bool managingCopy) {
+            auto sprite = managingCopy ? CCSprite::createWithSpriteFrameName("GJ_copyBtn_001.png") : nullptr;
+            if (!sprite) {
+                sprite = CCSprite::create("lock.png"_spr);
+            }
+            if (sprite) {
+                sprite->setScale(26.f / sprite->getContentHeight());
+            }
+            return sprite;
+        }
+
         CCPoint positionInPage(CCLayer* page, CCNode* node) {
             auto worldPosition = node->getParent()->convertToWorldSpace(node->getPosition());
             return page->convertToNodeSpace(worldPosition);
@@ -61,17 +73,17 @@ namespace geolock {
         }
     }
 
-    void addLockButton(CCLayer* page, LockButtonLayout layout, SEL_MenuHandler onPress) {
-        if (activeLock()) {
+    void addLockButton(CCLayer* page, GJGameLevel* level, LockButtonLayout layout, SEL_MenuHandler onPress) {
+        auto managingCopy = isLockTarget(level);
+        if (activeLock() && !managingCopy) {
             return;
         }
 
-        auto sprite = CCSprite::create("lock.png"_spr);
+        auto sprite = lockButtonSprite(managingCopy);
         if (!sprite) {
             return;
         }
 
-        sprite->setScale(26.f / sprite->getContentSize().height);
         auto size = sprite->getScaledContentSize();
         auto button = CCMenuItemSpriteExtra::create(sprite, page, onPress);
         button->setContentSize(size);
@@ -116,8 +128,15 @@ namespace geolock {
         }
     }
 
-    void confirmLock(CCLayer* page, GJGameLevel* level) {
+    void openLockControls(CCLayer* page, GJGameLevel* level) {
         if (!level) {
+            return;
+        }
+        if (isLockTarget(level)) {
+            showPracticeCopyPopup(level);
+            return;
+        }
+        if (activeLock()) {
             return;
         }
 
@@ -127,8 +146,9 @@ namespace geolock {
                     return;
                 }
 
-                if (auto menu = page->getChildByID("lock-menu"_spr)) {
-                    menu->removeFromParent();
+                auto button = typeinfo_cast<CCMenuItemSpriteExtra*>(page->getChildByIDRecursive("lock-button"_spr));
+                if (auto sprite = lockButtonSprite(true); button && sprite) {
+                    button->setSprite(sprite);
                 }
                 refreshPlayButton(page, level);
             }

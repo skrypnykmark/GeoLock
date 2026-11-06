@@ -11,14 +11,14 @@ class $modify(GeoLockLevelInfoLayer, LevelInfoLayer) {
             return false;
         }
 
-        geolock::addLockButton(this, geolock::LockButtonLayout::Online,
+        geolock::addLockButton(this, m_level, geolock::LockButtonLayout::Online,
             menu_selector(GeoLockLevelInfoLayer::onLockButton));
         geolock::refreshPlayButton(this, m_level);
         return true;
     }
 
     void onLockButton(CCObject*) {
-        geolock::confirmLock(this, m_level);
+        geolock::openLockControls(this, m_level);
     }
 
     void onPlay(CCObject* sender) {
@@ -40,14 +40,14 @@ class $modify(GeoLockEditLevelLayer, EditLevelLayer) {
             return false;
         }
 
-        geolock::addLockButton(this, geolock::LockButtonLayout::Editor,
+        geolock::addLockButton(this, m_level, geolock::LockButtonLayout::Editor,
             menu_selector(GeoLockEditLevelLayer::onLockButton));
         geolock::refreshPlayButton(this, m_level);
         return true;
     }
 
     void onLockButton(CCObject*) {
-        geolock::confirmLock(this, m_level);
+        geolock::openLockControls(this, m_level);
     }
 
     void onPlay(CCObject* sender) {

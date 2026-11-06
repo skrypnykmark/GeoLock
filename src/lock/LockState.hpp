@@ -17,10 +17,14 @@ namespace geolock {
         int levelId;
         std::string levelName;
         LevelSource source;
+        std::optional<int> practiceCopyId = std::nullopt;
     };
 
     const std::optional<Lock>& activeLock();
     bool startLock(GJGameLevel* level);
+    bool isLockTarget(GJGameLevel* level);
+    GJGameLevel* practiceCopy();
+    bool setPracticeCopy(GJGameLevel* target, GJGameLevel* copy);
     bool isLevelBlocked(GJGameLevel* level);
     void clearLockOnCompletion(GJGameLevel* level, bool practiceMode);
 }
