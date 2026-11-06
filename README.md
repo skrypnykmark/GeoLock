@@ -10,8 +10,8 @@ Open any online or created level, press the lock button, and confirm. Once locke
    bottom-left, next to the existing side buttons.
 2. Press it and confirm the single popup: **Are you sure you want to lock in?**
    (`Yes` / `No`).
-3. Pressing `Yes` stores that level (id + name) as the locked level. The lock
-   survives restarts because it is stored in the mod's saved values.
+3. Pressing `Yes` stores that level as the active lock. The lock survives
+   restarts and carries over from earlier versions of GeoLock.
 4. While a lock is active, the locked level keeps its normal play button. Every
    other online or created level shows the lock instead of play, and any attempt
    to start it is blocked with a single message:
@@ -55,7 +55,9 @@ GeoLock/
 ├── resources/
 │   └── lock.png
 ├── src/
-│   └── main.cpp
+│   ├── hooks/      # Geometry Dash entry points and completion events
+│   ├── lock/       # Level identity, saved state, and lock rules
+│   └── ui/         # Lock button, play-button artwork, and popups
 ├── README.md
 ├── LICENSE
 └── .gitignore
