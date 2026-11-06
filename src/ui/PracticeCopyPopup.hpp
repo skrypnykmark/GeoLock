@@ -1,7 +1,7 @@
 #pragma once
 
-class GJGameLevel;
+#include "LockRoomPopup.hpp"
 
 namespace geolock {
-    void showPracticeCopyPopup(GJGameLevel* target);
+    void showPracticeCopyPopup(LockRoomContext context);
 }

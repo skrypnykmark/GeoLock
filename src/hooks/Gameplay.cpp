@@ -9,6 +9,9 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/SecretLayer2.hpp>
 
+#include <algorithm>
+#include <cmath>
+
 using namespace geode::prelude;
 
 class $modify(GeoLockLevelPage, LevelPage) {
@@ -62,7 +65,59 @@ class $modify(GeoLockEditorPauseLayer, EditorPauseLayer) {
 };
 
 class $modify(GeoLockPlayLayer, PlayLayer) {
+    struct Fields {
+        bool trackingAttempt = false;
+    };
+
+    void finishLockAttempt(bool cleared = false) {
+        if (!m_fields->trackingAttempt) {
+            return;
+        }
+
+        m_fields->trackingAttempt = false;
+        if (!m_isPracticeMode && !m_isPlatformer) {
+            auto progress = cleared ? 100.f : this->getCurrentPercent();
+            if (std::isfinite(progress)) {
+                geolock::recordLockBest(m_level, static_cast<int>(std::clamp(progress, 0.f, cleared ? 100.f : 99.f)));
+            }
+        }
+    }
+
+    void updateAttempts() {
+        PlayLayer::updateAttempts();
+        if (!m_useReplay) {
+            geolock::recordLockAttempt(m_level);
+        }
+        m_fields->trackingAttempt = !m_isPracticeMode && !m_useReplay && !m_startPosObject &&
+            geolock::isLockTarget(m_level);
+    }
+
+    void destroyPlayer(PlayerObject* player, GameObject* object) {
+        PlayLayer::destroyPlayer(player, object);
+        if (m_playerDied) {
+            this->finishLockAttempt();
+        }
+    }
+
+    void resetLevel() {
+        this->finishLockAttempt();
+        PlayLayer::resetLevel();
+    }
+
+    void togglePracticeMode(bool practiceMode) {
+        if (practiceMode) {
+            this->finishLockAttempt();
+        }
+        PlayLayer::togglePracticeMode(practiceMode);
+    }
+
+    void onQuit() {
+        this->finishLockAttempt();
+        PlayLayer::onQuit();
+    }
+
     void levelComplete() {
+        this->finishLockAttempt(true);
         PlayLayer::levelComplete();
         geolock::clearLockOnCompletion(m_level, m_isPracticeMode);
     }

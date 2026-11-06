@@ -1,24 +1,63 @@
 #include "LockControls.hpp"
 
-#include "PracticeCopyPopup.hpp"
+#include "LockRoomPopup.hpp"
 #include "../lock/LockState.hpp"
 
 #include <Geode/Geode.hpp>
+#include <Geode/ui/NineSlice.hpp>
 #include <Geode/ui/Popup.hpp>
+
+#include <algorithm>
 
 using namespace geode::prelude;
 
 namespace geolock {
     namespace {
-        CCSprite* lockButtonSprite(bool managingCopy) {
-            auto sprite = managingCopy ? CCSprite::createWithSpriteFrameName("GJ_copyBtn_001.png") : nullptr;
-            if (!sprite) {
-                sprite = CCSprite::create("lock.png"_spr);
+        void showLockInFlash() {
+            auto director = CCDirector::get();
+            auto scene = director->getRunningScene();
+            auto path = (Mod::get()->getResourcesDir() / "lock-in.jpeg").string();
+            auto image = CCSprite::create(path.c_str());
+            if (!scene || !image) {
+                return;
             }
-            if (sprite) {
-                sprite->setScale(26.f / sprite->getContentHeight());
-            }
-            return sprite;
+
+            auto screen = director->getWinSize();
+            image->setScale(std::min(screen.width * 0.55f / image->getContentWidth(),
+                screen.height * 0.51f / image->getContentHeight()));
+            auto imageSize = image->getScaledContentSize();
+
+            auto overlay = CCNode::create();
+            auto backdrop = CCLayerColor::create({ 0, 0, 0, 0 }, screen.width, screen.height);
+            overlay->addChild(backdrop);
+
+            auto card = CCNodeRGBA::create();
+            card->setCascadeOpacityEnabled(true);
+            card->setPosition(screen / 2.f);
+            card->setScale(0.94f);
+
+            auto frame = NineSlice::create("GJ_square01.png");
+            frame->setScaleMultiplier(0.55f);
+            frame->setContentSize({ imageSize.width + 24.f, imageSize.height + 24.f });
+            card->addChild(frame);
+            card->addChild(image);
+            overlay->addChild(card);
+            card->setOpacity(0);
+            scene->addChild(overlay, 1000);
+
+            constexpr float duration = 3.f;
+            constexpr float fadeIn = 0.12f;
+            constexpr float fadeOut = 0.25f;
+            constexpr float hold = duration - fadeIn - fadeOut;
+            auto fade = [](GLubyte opacity) {
+                return CCSequence::create(CCFadeTo::create(fadeIn, opacity), CCDelayTime::create(hold),
+                    CCFadeTo::create(fadeOut, 0), nullptr);
+            };
+            backdrop->runAction(fade(140));
+            card->runAction(fade(255));
+            card->runAction(CCEaseSineOut::create(CCScaleTo::create(0.16f, 1.f)));
+            overlay->runAction(CCSequence::create(CCDelayTime::create(duration),
+                CCRemoveSelf::create(), nullptr));
         }
 
         CCPoint positionInPage(CCLayer* page, CCNode* node) {
@@ -59,31 +98,41 @@ namespace geolock {
             return { gearPosition.x, gearPosition.y + spacing };
         }
 
-        void setPlayImagesVisible(CCMenuItemSpriteExtra* button, bool visible) {
+        void hidePlayImages(CCMenuItemSpriteExtra* button) {
             for (auto image : { button->getNormalImage(), button->getSelectedImage(), button->getDisabledImage() }) {
                 if (image) {
-                    image->setVisible(visible);
+                    image->setVisible(false);
                 }
             }
         }
 
         void showBlockedMessage(const Lock& lock) {
             auto message = fmt::format("Go back to \"{}\" (ID: {}).", lock.levelName, lock.levelId);
-            FLAlertLayer::create(nullptr, message, "OK")->show();
+            createQuickPopup(nullptr, std::move(message), "OK", nullptr,
+                [](FLAlertLayer*, bool) {
+                    queueInMainThread([] { showLockRoom(); });
+                }, true, true);
         }
     }
 
-    void addLockButton(CCLayer* page, GJGameLevel* level, LockButtonLayout layout, SEL_MenuHandler onPress) {
-        auto managingCopy = isLockTarget(level);
-        if (activeLock() && !managingCopy) {
+    void refreshLockButton(CCLayer* page, GJGameLevel* level, LockButtonLayout layout, SEL_MenuHandler onPress) {
+        auto existing = page->getChildByID("lock-menu"_spr);
+        if (!level || isLevelBlocked(level)) {
+            if (existing) {
+                existing->removeFromParent();
+            }
+            return;
+        }
+        if (existing) {
             return;
         }
 
-        auto sprite = lockButtonSprite(managingCopy);
+        auto sprite = CCSprite::create("lock.png"_spr);
         if (!sprite) {
             return;
         }
 
+        sprite->setScale(26.f / sprite->getContentHeight());
         auto size = sprite->getScaledContentSize();
         auto button = CCMenuItemSpriteExtra::create(sprite, page, onPress);
         button->setContentSize(size);
@@ -120,11 +169,19 @@ namespace geolock {
             icon->setScale(size.height * 0.8f / icon->getContentSize().height);
             icon->setPosition({ size.width / 2.f, size.height / 2.f });
             icon->setID("lock-icon"_spr);
-            setPlayImagesVisible(button, false);
+            hidePlayImages(button);
             button->addChild(icon);
         } else {
             lockIcon->removeFromParent();
-            setPlayImagesVisible(button, true);
+            auto image = button->isEnabled()
+                ? (button->isSelected() ? button->getSelectedImage() : button->getNormalImage())
+                : button->getDisabledImage();
+            if (!image) {
+                image = button->getNormalImage();
+            }
+            if (image) {
+                image->setVisible(true);
+            }
         }
     }
 
@@ -132,11 +189,10 @@ namespace geolock {
         if (!level) {
             return;
         }
-        if (isLockTarget(level)) {
-            showPracticeCopyPopup(level);
-            return;
-        }
         if (activeLock()) {
+            if (!isLevelBlocked(level)) {
+                showLockRoom(isLockTarget(level) ? LockRoomContext::TargetPage : LockRoomContext::PracticePage);
+            }
             return;
         }
 
@@ -146,11 +202,8 @@ namespace geolock {
                     return;
                 }
 
-                auto button = typeinfo_cast<CCMenuItemSpriteExtra*>(page->getChildByIDRecursive("lock-button"_spr));
-                if (auto sprite = lockButtonSprite(true); button && sprite) {
-                    button->setSprite(sprite);
-                }
                 refreshPlayButton(page, level);
+                queueInMainThread([] { showLockInFlash(); });
             }
         );
     }

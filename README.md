@@ -7,20 +7,19 @@ locked level and an optional practice copy until you beat the original.
 
 ## How it works
 
-1. Open any online or created level's page. A lock button appears in the
-   bottom-left, next to the existing side buttons.
-2. Press it and confirm the single popup: **Are you sure you want to lock in?**
-   (`Yes` / `No`).
+1. Open an online or created level's page. Look for the lock button near the
+   gear.
+2. Press the lock button and choose **Yes** in the confirmation popup.
 3. Pressing `Yes` stores that level as the active lock. The lock survives
-   restarts and carries over from earlier versions of GeoLock.
+   restarts and carries over from earlier versions of GeoLock. A brief lock-in
+   animation plays when you create a new lock.
 4. While a lock is active, the target and its attached practice copy keep their
    normal play buttons. Other online and created levels show the lock instead
-   of play. Blocked launches show a single message:
+   of play. Blocked launches show the target's name and ID. Press **OK** to
+   open the Lock Room.
 
-   > Go back to "level_name" (ID: 123456).
-
-   This covers online levels, saved/downloaded levels, creator/editor levels,
-   official RobTop levels and every other normal way of entering gameplay.
+   The launch checks cover online and saved levels, created levels and editor
+   playtests, official levels, Tower floors, and secret levels.
 5. A normal-mode clear on the original target releases the lock and restores
    the play buttons.
 
@@ -29,15 +28,33 @@ locked level, disable the mod, or uninstall it.
 
 ## Practice copies
 
-On the locked level's page, press the copy icon where the lock button was.
-Choose one existing level from **My Levels**, such as a StartPos copy. You can
-play or editor-playtest that copy during the lock. Only the original target can
-release the lock.
+Press the lock icon on the target or practice copy to open the Lock Room, then
+select **Choose Practice**. Pick an existing level from **My Levels**, such as
+a StartPos copy. You can play or editor-playtest that copy during the lock.
 
 The attached level is highlighted in green. Select another row to replace it or
 select the green row again to detach it. The attachment survives renames and
 restarts, and the picker scrolls to it when you reopen it. If you delete the
 attached level, the picker shows it as missing and lets you choose another.
+
+## Lock Room
+
+Press the lock icon in the top-right of the main menu to see your active target,
+when you locked in, and your progress.
+
+- **Starting Best** is your Normal Mode record when you locked the target.
+- **Best Since Lock** is your best recorded Normal Mode run on the target during
+  this lock.
+- **Locked Attempts** counts gameplay attempts on the target and its attached
+  practice copy in Normal and Practice Mode.
+
+**Open Target** and **Open Practice** take you to those level pages. If you
+open the Lock Room from one of those pages, it offers the other destination
+when available. When an online target needs a download, you can retry from the
+Lock Room.
+
+Progress tracking starts with this version. Older locks keep their target and
+practice copy and show **N/A** for Starting Best. Platformer locks track attempts.
 
 ## Dependencies
 
@@ -65,9 +82,10 @@ GeoLock/
 ├── about.md
 ├── logo.png
 ├── resources/
+│   ├── lock-in.jpeg
 │   └── lock.png
 ├── src/
-│   ├── hooks/      # Geometry Dash entry points and completion events
+│   ├── hooks/      # Geometry Dash entry points, gameplay, and downloads
 │   ├── lock/       # Level identity, saved state, and lock rules
 │   └── ui/         # Lock button, play-button artwork, and popups
 ├── README.md

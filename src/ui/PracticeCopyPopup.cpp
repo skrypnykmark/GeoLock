@@ -1,5 +1,6 @@
 #include "PracticeCopyPopup.hpp"
 
+#include "LockControls.hpp"
 #include "../lock/LockState.hpp"
 
 #include <Geode/Geode.hpp>
@@ -25,6 +26,7 @@ namespace geolock {
         constexpr float ROW_HEIGHT = 23.f;
         constexpr ccColor3B ROW_COLOR{ 112, 63, 38 };
         constexpr ccColor3B SELECTED_ROW_COLOR{ 70, 113, 56 };
+        constexpr float SELECTION_DURATION = 0.2f;
 
         NineSlice* panel(CCSize size, ccColor3B color, GLubyte opacity) {
             auto background = NineSlice::create("square02b_001.png");
@@ -36,16 +38,22 @@ namespace geolock {
         }
 
         class PracticeCopyPopup : public Popup {
-            Ref<GJGameLevel> m_target;
+            LockRoomContext m_context;
+            int m_targetId = 0;
+            LevelSource m_targetSource = LevelSource::Legacy;
             CCMenuItemSpriteExtra* m_selectedButton = nullptr;
             CCLabelBMFont* m_missingNotice = nullptr;
 
-            bool init(GJGameLevel* target) {
-                if (!isLockTarget(target) || !Popup::init(280.f, 230.f)) {
+            explicit PracticeCopyPopup(LockRoomContext context) : m_context(context) {}
+
+            bool init() override {
+                const auto& lock = activeLock();
+                if (!lock || !Popup::init(280.f, 230.f)) {
                     return false;
                 }
 
-                m_target = target;
+                m_targetId = lock->levelId;
+                m_targetSource = lock->source;
                 this->setTitle("Practice Copy", "goldFont.fnt", 0.62f);
                 this->addLevelList(practiceCopy());
                 return true;
@@ -90,7 +98,7 @@ namespace geolock {
                     if (level == attachedCopy) {
                         selectedRow = row;
                         m_selectedButton = button;
-                        this->setSelectedColor(button, true);
+                        this->setSelectedColor(button, true, false);
                     }
                 }
 
@@ -133,25 +141,33 @@ namespace geolock {
                 }
 
                 auto pick = CCMenuItemSpriteExtra::create(background, this, menu_selector(PracticeCopyPopup::onPick));
-                pick->m_scaleMultiplier = 0.98f;
+                pick->m_animationEnabled = false;
                 pick->setUserObject(level);
                 return pick;
             }
 
-            void setSelectedColor(CCMenuItemSpriteExtra* button, bool selected) {
+            void setSelectedColor(CCMenuItemSpriteExtra* button, bool selected, bool animated = true) {
                 auto background = static_cast<NineSlice*>(button->getNormalImage());
-                background->setColor(selected ? SELECTED_ROW_COLOR : ROW_COLOR);
+                auto color = selected ? SELECTED_ROW_COLOR : ROW_COLOR;
+                background->stopAllActions();
+                if (animated) {
+                    background->runAction(CCTintTo::create(SELECTION_DURATION, color.r, color.g, color.b));
+                } else {
+                    background->setColor(color);
+                }
             }
 
             void onPick(CCObject* sender) {
                 auto button = static_cast<CCMenuItemSpriteExtra*>(sender);
                 auto selection = button == m_selectedButton ? nullptr : button;
                 auto copy = selection ? static_cast<GJGameLevel*>(selection->getUserObject()) : nullptr;
-                if (!setPracticeCopy(m_target, copy)) {
+                const auto& lock = activeLock();
+                if (!lock || lock->levelId != m_targetId || lock->source != m_targetSource || !setPracticeCopy(copy)) {
                     Notification::create("Could not update the practice copy", NotificationIcon::Error)->show();
                     return;
                 }
 
+                PracticeCopyChanged().send();
                 if (m_selectedButton) {
                     this->setSelectedColor(m_selectedButton, false);
                 }
@@ -164,10 +180,16 @@ namespace geolock {
                 }
             }
 
+            void onClose(CCObject* sender) override {
+                auto context = m_context;
+                Popup::onClose(sender);
+                queueInMainThread([context] { showLockRoom(context); });
+            }
+
         public:
-            static PracticeCopyPopup* create(GJGameLevel* target) {
-                auto popup = new PracticeCopyPopup();
-                if (popup->init(target)) {
+            static PracticeCopyPopup* create(LockRoomContext context) {
+                auto popup = new PracticeCopyPopup(context);
+                if (popup->init()) {
                     popup->autorelease();
                     return popup;
                 }
@@ -178,8 +200,8 @@ namespace geolock {
         };
     }
 
-    void showPracticeCopyPopup(GJGameLevel* target) {
-        if (auto popup = PracticeCopyPopup::create(target)) {
+    void showPracticeCopyPopup(LockRoomContext context) {
+        if (auto popup = PracticeCopyPopup::create(context)) {
             popup->show();
         }
     }

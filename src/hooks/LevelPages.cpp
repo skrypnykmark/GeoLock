@@ -11,7 +11,7 @@ class $modify(GeoLockLevelInfoLayer, LevelInfoLayer) {
             return false;
         }
 
-        geolock::addLockButton(this, m_level, geolock::LockButtonLayout::Online,
+        geolock::refreshLockButton(this, m_level, geolock::LockButtonLayout::Online,
             menu_selector(GeoLockLevelInfoLayer::onLockButton));
         geolock::refreshPlayButton(this, m_level);
         return true;
@@ -40,10 +40,18 @@ class $modify(GeoLockEditLevelLayer, EditLevelLayer) {
             return false;
         }
 
-        geolock::addLockButton(this, m_level, geolock::LockButtonLayout::Editor,
+        this->refreshGeoLockControls();
+        this->addEventListener(geolock::PracticeCopyChanged(), [this] {
+            this->refreshGeoLockControls();
+            return ListenerResult::Propagate;
+        });
+        return true;
+    }
+
+    void refreshGeoLockControls() {
+        geolock::refreshLockButton(this, m_level, geolock::LockButtonLayout::Editor,
             menu_selector(GeoLockEditLevelLayer::onLockButton));
         geolock::refreshPlayButton(this, m_level);
-        return true;
     }
 
     void onLockButton(CCObject*) {
